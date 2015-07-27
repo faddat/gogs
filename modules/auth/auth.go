@@ -21,6 +21,10 @@ import (
 	"github.com/gogits/gogs/modules/uuid"
 )
 
+func IsAPIPath(url string) bool {
+	return strings.HasPrefix(url, "/api/")
+}
+
 // SignedInId returns the id of signed in user.
 func SignedInId(req *http.Request, sess session.Store) int64 {
 	if !models.HasEngine {
@@ -28,7 +32,7 @@ func SignedInId(req *http.Request, sess session.Store) int64 {
 	}
 
 	// API calls need to check access token.
-	if strings.HasPrefix(req.URL.Path, "/api/") {
+	if IsAPIPath(req.URL.Path) {
 		auHead := req.Header.Get("Authorization")
 		if len(auHead) > 0 {
 			auths := strings.Fields(auHead)
@@ -208,7 +212,14 @@ func validate(errs binding.Errors, data map[string]interface{}, f Form, l macaro
 
 		if errs[0].FieldNames[0] == field.Name {
 			data["Err_"+field.Name] = true
-			trName := l.Tr("form." + field.Name)
+
+			trName := field.Tag.Get("locale")
+			if len(trName) == 0 {
+				trName = l.Tr("form." + field.Name)
+			} else {
+				trName = l.Tr(trName)
+			}
+
 			switch errs[0].Classification {
 			case binding.ERR_REQUIRED:
 				data["ErrorMsg"] = trName + l.Tr("form.require_error")
